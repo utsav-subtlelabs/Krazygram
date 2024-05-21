@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Krazygram</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <a href="#">Krazygram</a>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#">Home</a></li>
+                <li><a href="#">About</a></li>
+                <li><a href="#" style="text-decoration:underline;">Posts</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+            <div class="menu-toggle">
+                <button>&#9776;</button>
+            </div>
+        </div>
+    </nav>
+    <div id="container" class="container"></div>
+    <script>
+        // Navbar toggle
+        const menuToggle = document.querySelector('.menu-toggle button');
+        const navLinks = document.querySelector('.nav-links');
+        menuToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+        // Fetch images and data from the APIs
+        const container = document.getElementById('container');
+        fetch('https://jsonplaceholder.typicode.com/photos')
+            .then(response => response.json())
+            .then(images => {
+                fetch('https://jsonplaceholder.typicode.com/posts')
+                    .then(response => response.json())
+                    .then(posts => {
+                        images = images.slice(0, 100);
+                        posts = posts.slice(0, 100);
+                        const combinedData = images.map((image, index) => ({
+                            ...image,
+                            ...posts[index]
+                        }));
+                        combinedData.forEach((data, index) => {
+                            const card = document.createElement('div');
+                            card.className = 'card';
+                            card.innerHTML = `
+                                <img src="${data.url}" alt="${data.title}">
+                                <h2>${data.title}</h2>
+                                <p>${data.body}</p>
+                                <button class="comments-button" data-post-id="${data.id}">Comments</button>
+                                <button class="like-button">&#10084;</button>
+                                <div class="comments-container"></div>
+                            `;
+                            container.appendChild(card);
+                        });
+                        const likeButtons = document.querySelectorAll('.like-button');
+                        likeButtons.forEach(button => {
+                            button.addEventListener('click', () => {
+                                button.classList.toggle('liked');
+                            });
+                        });
+                        const commentButtons = document.querySelectorAll('.comments-button');
+                        commentButtons.forEach(button => {
+                            button.addEventListener('click', (event) => {
+                                const postId = event.target.getAttribute('data-post-id');
+                                const commentsContainer = event.target.nextElementSibling.nextElementSibling;
+                                const card = event.target.closest('.card');
+                                const rowCards = Array.from(card.parentElement.children)
+                                    .slice(Math.floor(Array.from(card.parentElement.children).indexOf(card) / 3) * 3,
+                                           Math.floor(Array.from(card.parentElement.children).indexOf(card) / 3) * 3 + 3);
+                                if (commentsContainer.innerHTML.trim()) {
+                                    commentsContainer.innerHTML = '';
+                                    rowCards.forEach(c => c.style.height = 'auto');
+                                } else {
+                                    fetch(`https://jsonplaceholder.typicode.com/comments?postId=${postId}`)
+                                        .then(response => response.json())
+                                        .then(comments => {
+                                            commentsContainer.innerHTML = comments.map(comment => `
+                                                <div class="comment">
+                                                    <p><strong>${comment.name}</strong>: ${comment.body}</p>
+                                                </div>
+                                            `).join('');
+                                            setTimeout(() => {
+                                                const maxHeight = Math.max(...rowCards.map(c => c.scrollHeight));
+                                                rowCards.forEach(c => c.style.height = `${maxHeight}px`);
+                                            }, 100);
+                                        });
+                                }
+                            });
+                        });
+                    });
+            });
+    </script>
+</body>
+</html>
